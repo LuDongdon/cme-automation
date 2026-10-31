@@ -1,0 +1,85 @@
+# ============================================================
+# 继续教育自动化工具 — 配置模板
+# 使用方法：复制本文件为 config.yaml，再填入自己的真实信息
+#   copy config.example.yaml config.yaml      (Windows CMD)
+#   cp config.example.yaml config.yaml        (Git Bash / PowerShell)
+#
+# 注意：config.yaml 已被 .gitignore 忽略，不会提交到仓库。
+#       请勿把真实账号、密码、身份证号写进本模板。
+# ============================================================
+
+browser:
+  channel: msedge              # Playwright 浏览器通道：msedge / chrome / chromium
+  headless: false              # 需人工介入验证码，建议保持 false
+  slow_mo: 300                 # 每步操作延迟（毫秒），便于观察
+  viewport_width: 1920
+  viewport_height: 1080
+  ignore_https_errors: true    # 自签名证书的站点需要开启
+  base_url: https://your-cme-platform.example.com/index.html
+
+login:
+  username: ''                 # 登录账号（留空则依赖浏览器自动填充）
+  password: ''                 # 登录密码
+  verification_recipient: ''   # 短信验证码接收人，需与平台下拉框中的选项一致
+  verification_timeout: 120    # 等待输入/识别验证码的超时（秒）
+
+course:
+  year: 2026
+  credit_category:
+    level1: 有组织的继续医学教育实践活动
+    level2: 单位组织的继续医学教育实践活动
+  activity_content: 专业课
+  medical_system: 西医
+  planned_students: 6          # 拟授分人数
+  discipline: 临床外科学
+  sub_discipline: 整形外科学
+  activity_form: 研讨会
+  assessment_method: 其他
+  credits: 0.2                 # 每门课程学分
+  default_start_time: '19:30'
+  default_end_time: '20:45'
+  period_start_time: 09:00
+  period_end_time: '23:00'
+  duration_hours: 1
+  is_lecturer_grant_credit: true
+  # 授课教师名单，按顺序轮换填表。
+  # id_number 为 18 位证件号，平台授分时必填。
+  teachers:
+  - name: 张三
+    id_number: '000000000000000000'
+  # 兼容旧版单教师字段，程序会自动同步为 teachers[0]
+  teacher:
+    name: 张三
+    id_number: '000000000000000000'
+
+attendance:
+  sign_in_time: '19:30'
+  sign_out_time: '20:45'
+  qr_timeout_seconds: 300      # 二维码有效期
+  qr_resend_count: 3           # 二维码重发次数
+  qr_save_dir: C:/Users/YourName/Desktop/二维码截图
+
+wechat:
+  enabled: true
+  silent: true                 # 静默发送（不抢焦点）
+  search_offset_x: 120         # 搜索框相对偏移，需按自己分辨率校准
+  search_offset_y: 50
+  target_groups:               # 二维码要发送到的群名/联系人
+  - 继续教育签到
+  - 文件传输助手
+  fallback_dir: C:/Users/YourName/Desktop/待发送截图/
+  exe_path: D:/Program Files/Tencent/Weixin/Weixin.exe
+
+auto_start:
+  enabled: false
+  time: '19:20'
+  day_mode: every_day          # every_day / weekdays / weekends / custom
+  lock_password: ''            # Windows 锁屏 PIN，仅用于定时任务自动解锁
+  auto_confirm_delay: 3
+  idle_exit_minutes: 10.0      # 自动任务结束后空闲多久退出 Flask，0=禁用
+  idle_check_interval: 30
+
+logging:
+  level: INFO
+  log_dir: logs
+  screenshot_dir: screenshots

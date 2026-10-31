@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>继续教育自动化工具</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="data:,">
+    <script>
+        // 主题初始化（默认浅色，读取 localStorage 记忆，提前应用避免闪烁）
+        (function(){try{var t=localStorage.getItem('cme-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header class="masthead">
+            <div class="masthead-brand">
+                <span class="brand-mark">◆</span>
+                <div>
+                    <h1>继续教育自动化工具</h1>
+                    <p class="masthead-sub">CME Automation Console · 2026</p>
+                </div>
+            </div>
+            <div class="status-bar">
+                <span id="status-indicator" class="status-off">● 空闲</span>
+                <span id="login-status"></span>
+                <button type="button" id="theme-toggle" class="btn btn-sm btn-ghost" title="切换深浅色主题">☾</button>
+                <button type="button" id="btn-sync" class="btn btn-sm btn-ghost" title="读取网页举办/授分状态，更新 courses.yaml">🔄 同步状态</button>
+                <button type="button" id="btn-settings" class="btn btn-sm btn-ghost" title="账号与教师设置">⚙ 设置</button>
+            </div>
+        </header>
+
+        <!-- 崩溃恢复横幅 -->
+        <div id="resume-banner" class="resume-banner" style="display:none;">
+            <span>⚠ 检测到未完成的工作流（<span id="resume-time"></span>），是否恢复？</span>
+            <button id="btn-resume" class="btn btn-primary btn-sm">恢复</button>
+            <button id="btn-discard" class="btn btn-sm btn-secondary">放弃</button>
+        </div>
+
+        <main class="deck">
+            <!-- 定时自动启动设置 -->
+            <section class="card">
+                <h2><span>⏰</span> 定时自动启动 <span id="auto-start-badge" class="auto-badge"></span> <span class="h2-tag">SCHEDULER</span></h2>
+                <div class="form-row form-row-2col">
+                    <div>
+                        <label>启用定时启动</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="auto-start-enabled" onchange="onAutoStartToggle()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div>
+                        <label>下次执行</label>
+                        <span id="auto-start-next-run" style="font-family:var(--mono);font-size:13px;color:var(--accent);">--</span>
+                    </div>
+                </div>
+                <div id="auto-start-details" style="display:none;">
+                    <div class="form-row form-row-2col">
+                        <div>
+                            <label>启动时间</label>
+                            <input type="time" id="auto-start-time" value="19:20">
+                        </div>
+                        <div>
+                            <label>日期模式</label>
+                            <select id="auto-start-days">
+                                <option value="every_day">每天</option>
+                                <option value="workdays" selected>工作日（周一至周五）</option>
+                                <option value="weekends">仅周末</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row form-row-2col">
+                        <div>
+                            <label>自动确认等待（秒）</label>
+                            <input type="number" id="auto-confirm-delay" value="3" min="1" max="30">
+                            <span class="hint">弹窗出现后自动确认的倒计时</span>
+                        </div>
+                        <div>
+                            <label>锁屏 PIN 码</label>
+                            <input type="password" id="auto-start-pin" value="" maxlength="20">
+                            <span class="hint">用于自动解锁 Windows 锁屏</span>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" id="btn-save-auto-start" class="btn btn-primary">💾 保存定时设置</button>
+                        <span id="auto-start-save-msg" style="font-size:12px;margin-left:4px;line-height:36px;color:var(--text-1);"></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 课程创建 -->
+            <section class="card">
+                <h2><span>📋</span> 课程创建 <span class="h2-tag">FORM</span></h2>
+                <form id="course-form">
+                    <div class="form-row">
+                        <label>选择课程 <span class="required">*</span></label>
+                        <div class="list-tools">
+                            <a href="#" onclick="toggleAllCourses(true);return false;">全选</a>
+                            <span class="divider">|</span>
+                            <a href="#" onclick="toggleAllCourses(false);return false;">取消全选</a>
+                            <span class="count" id="course-count">已选 0 个</span>
+                        </div>
+                        <div class="course-checkbox-list" id="course-checkboxes"></div>
+                        <span class="hint">每个课程将作为独立活动创建，活动名 = 课程名</span>
+                    </div>
+
+                    <div class="form-row" id="single-date-row">
+                        <label>课程日期</label>
+                        <input type="date" id="single-date">
+                        <span class="hint">（仅选1个课程时）</span>
+                    </div>
+                    <div class="form-row" id="date-mode-row" style="display:none;">
+                        <label>日期模式 <span style="color:var(--amber);">多课程</span></label>
+                        <select id="date-mode" onchange="renderSchedulePreview()">
+                            <option value="mon_fri">每周一至周五</option>
+                            <option value="mon_wed_fri">每周一三五</option>
+                            <option value="tue_thu_sat">每周二四六</option>
+                            <option value="workdays">每周工作日</option>
+                            <option value="every_day" selected>每天</option>
+                            <option value="weekends">仅周末</option>
+                        </select>
+                    </div>
+                    <div class="form-row" id="schedule-preview-row" style="display:none;">
+                        <label>排课预览</label>
+                        <div class="schedule-preview" id="schedule-preview"></div>
+                    </div>
+
+                    <div class="form-row form-row-2col">
+                        <div>
+                            <label>课程开始时间</label>
+                            <input type="time" id="course-start" value="19:30">
+                        </div>
+                        <div>
+                            <label>课程结束时间</label>
+                            <input type="time" id="course-end" value="20:45">
+                        </div>
+                    </div>
+                    <div class="form-row hint" id="period-time-hint" style="margin-top:-8px;">
+                        💡 单课程：举办周期时间 = 以上课程时间 | 多课程：举办周期 = 09:00~23:00
+                    </div>
+
+                    <div class="form-row form-row-2col">
+                        <div>
+                            <label>签到时间</label>
+                            <input type="time" id="sign-in-time" value="19:30">
+                        </div>
+                        <div>
+                            <label>签退时间</label>
+                            <input type="time" id="sign-out-time" value="20:45">
+                        </div>
+                    </div>
+
+                    <div class="form-row form-row-2col">
+                        <div>
+                            <label>验证码接收人</label>
+                            <div class="recipient-row">
+                                <select id="verify-recipient" style="flex:1;">
+                                    <option value="">请先添加接收人</option>
+                                </select>
+                                <button type="button" id="btn-add-recipient" class="btn btn-sm btn-ghost" title="添加新接收人">+</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label>拟授分人数</label>
+                            <input type="number" id="planned-students" value="6" min="1" max="100">
+                        </div>
+                    </div>
+
+                    <div class="form-row form-row-2col">
+                        <div>
+                            <label>二维码时效</label>
+                            <select id="qr-timeout">
+                                <option value="3">3 秒</option>
+                                <option value="5">5 秒</option>
+                                <option value="7">7 秒</option>
+                                <option value="10">10 秒</option>
+                                <option value="100">100 秒</option>
+                                <option value="300" selected>300 秒</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>发送次数</label>
+                            <input type="number" id="qr-count" value="3" min="1" max="10">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label>微信目标群</label>
+                        <div class="recipient-row">
+                            <select id="wechat-group" style="flex:1;">
+                                <option value="">-- 手动输入 --</option>
+                            </select>
+                            <button type="button" id="btn-refresh-chats" class="btn btn-sm btn-ghost" title="刷新微信聊天列表">🔄</button>
+                        </div>
+                        <div id="wechat-custom-row" style="display:flex;gap:8px;margin-top:8px;">
+                            <input type="text" id="wechat-group-custom" placeholder="或输入自定义群名" style="flex:1;">
+                            <button type="button" id="btn-save-chat" class="btn btn-sm btn-ghost" title="保存到列表">💾</button>
+                        </div>
+                    </div>
+
+                    <!-- 考勤课程选择 -->
+                    <div class="form-row" id="attendance-course-row">
+                        <label>考勤课程 <span style="color:var(--amber);">（仅显示今日课程）</span></label>
+                        <div class="course-checkbox-list" id="attendance-course-list" style="max-height:150px;">
+                            <div style="padding:8px;color:var(--text-2);">-- 今日暂无已创建的课程 --</div>
+                        </div>
+                        <span class="hint">仅考勤今日计划举办的课程（避免误考勤非今日课程）</span>
+                    </div>
+
+                    <!-- 授分课程选择（多选） -->
+                    <div class="form-row" id="grant-course-row">
+                        <label>授分课程 <span style="color:var(--blue);">（多选已考勤待授分课程）</span></label>
+                        <div class="list-tools">
+                            <a href="#" onclick="toggleGrantAll(true);return false;">全选待授分</a>
+                            <span class="divider">|</span>
+                            <a href="#" onclick="toggleGrantAll(false);return false;">取消全选</a>
+                            <span class="count" id="grant-count">已选 0 个</span>
+                        </div>
+                        <div class="course-checkbox-list" id="grant-course-list" style="max-height:200px;">
+                            <div style="padding:8px;color:var(--text-2);">-- 暂无待授分课程 --</div>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" id="btn-start" class="btn btn-primary">🚀 开始创建课程 + 考勤</button>
+                        <button type="button" id="btn-course-only" class="btn btn-secondary">📝 仅创建课程</button>
+                        <button type="button" id="btn-attend-only" class="btn btn-secondary">📱 仅考勤</button>
+                        <button type="button" id="btn-grant" class="btn btn-primary" disabled title="请先选择待授分课程">📋 授分（请先选择课程）</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- 操作日志 -->
+            <section class="card">
+                <h2><span>▤</span> 操作日志 <span class="h2-tag">LIVE</span></h2>
+                <div id="log-panel" class="log-panel">
+                    <div id="log-content"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 验证码输入弹窗 -->
+    <div class="modal-overlay" id="modal-verify">
+        <div class="modal-box">
+            <h3>📱 请输入手机验证码</h3>
+            <p>验证码已发送到手机，请在下方输入<br><span style="color:var(--accent);font-size:12px;">💡 也可直接复制短信内容，系统将自动识别并填入</span></p>
+            <input type="text" id="verify-code-input" class="code-input" placeholder="6位验证码" maxlength="6" autocomplete="off">
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="btn-verify-cancel">取消</button>
+                <button class="btn btn-primary" id="btn-verify-submit">确认提交</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加接收人弹窗 -->
+    <div class="modal-overlay" id="modal-add-recipient">
+        <div class="modal-box">
+            <h3>添加新的验证码接收人</h3>
+            <input type="text" id="new-recipient-name" placeholder="输入姓名" maxlength="20">
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="btn-cancel-recipient">取消</button>
+                <button class="btn btn-primary" id="btn-save-recipient">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 账号与教师设置弹窗 -->
+    <div class="modal-overlay" id="modal-settings">
+        <div class="modal-box" style="width:460px;">
+            <h3>⚙ 账号与教师设置</h3>
+            <div class="form-row">
+                <label>登录账号 <span class="required">*</span></label>
+                <input type="text" id="settings-username" placeholder="继续教育网站登录账号" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>登录密码</label>
+                <input type="password" id="settings-password" placeholder="留空则使用浏览器自动填充" autocomplete="new-password">
+            </div>
+            <div class="form-row">
+                <label>验证码接收人</label>
+                <input type="text" id="settings-recipient" placeholder="短信验证码接收人姓名">
+            </div>
+            <div class="form-row" style="border-top:1px solid var(--border);padding-top:12px;">
+                <label>授课教师 <span class="required">*</span></label>
+                <span class="hint">按顺序轮换：第 1 门课用第 1 位，依次循环</span>
+            </div>
+            <!-- 教师行由 app.js 根据配置渲染（第 N 位 / 姓名 / 身份证号） -->
+            <div id="settings-teachers"></div>
+            <div class="form-row" style="border-top:1px solid var(--border);padding-top:12px;">
+                <label>微信安装路径</label>
+                <input type="text" id="settings-wechat-path" placeholder="如 D:/Program files/Weixin/Weixin.exe（留空自动查找）" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>空闲自动退出（分钟）</label>
+                <input type="number" id="settings-idle-minutes" value="10" min="0" step="1">
+                <span class="hint">自动任务结束后无操作且无任务，N 分钟后自动退出（0=禁用）</span>
+            </div>
+            <div class="form-row">
+                <label>二维码截图保存目录</label>
+                <input type="text" id="settings-qr-dir" placeholder="如 C:/Users/xxx/Desktop/二维码截图（留空用默认桌面目录）" autocomplete="off">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="btn-settings-cancel">取消</button>
+                <button class="btn btn-primary" id="btn-settings-save">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 智能工作流弹窗 -->
+    <div class="modal-overlay" id="modal-smart">
+        <div class="modal-box" style="width:420px;">
+            <h3 id="smart-title"></h3>
+            <p style="margin-bottom:8px;"><strong id="smart-course-name"></strong></p>
+            <p id="smart-detail"></p>
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="btn-smart-skip">跳过</button>
+                <button class="btn btn-primary" id="btn-smart-start"></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 主题切换：点击切换浅/深色并记忆到 localStorage
+        (function(){
+            var btn = document.getElementById('theme-toggle');
+            if (!btn) return;
+            function cur(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+            function render(){
+                var dark = cur() === 'dark';
+                btn.textContent = dark ? '☀' : '☾';
+                btn.title = dark ? '切换为浅色' : '切换为深色';
+            }
+            btn.onclick = function(){
+                var dark = cur() === 'dark';
+                document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+                try { localStorage.setItem('cme-theme', dark ? 'light' : 'dark'); } catch (e) {}
+                render();
+            };
+            render();
+        })();
+    </script>
+    <script src="/static/app.js"></script>
+</body>
+</html>

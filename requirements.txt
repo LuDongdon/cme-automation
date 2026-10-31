@@ -1,0 +1,8 @@
+playwright>=1.48.0
+pyyaml>=6.0
+flask>=2.0
+pywinauto>=0.6.8
+pillow>=10.0
+pywin32>=305          # 必需：win32gui/win32clipboard 等 —— 微信自动化 + 验证码剪贴板监控的硬依赖
+pynput>=1.7           # 可选：微信发送第3层降级(键盘)；缺失时自动回退到 win32/pywinauto
+uiautomation>=2.0.18  # 可选：微信「进入微信」按钮的 UIA 检测；缺失时自动回退

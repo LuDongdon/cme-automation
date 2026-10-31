@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考勤监控</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="data:,">
+    <script>
+        (function(){try{var t=localStorage.getItem('cme-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← 返回主页</a>
+
+        <header class="masthead">
+            <div class="masthead-brand">
+                <span class="brand-mark">◆</span>
+                <div>
+                    <h1>考勤监控</h1>
+                    <p class="masthead-sub" id="course-title">等待中...</p>
+                </div>
+            </div>
+            <div class="status-bar">
+                <button type="button" id="theme-toggle" class="btn btn-sm btn-ghost" title="切换深浅色主题">☾</button>
+            </div>
+        </header>
+
+        <div id="sign-in-status" class="sign-status waiting">签到状态: ○ 等待中</div>
+        <div id="sign-out-status" class="sign-status waiting">签退状态: ○ 等待中</div>
+
+        <main class="deck">
+            <div class="attendance-grid">
+                <section class="card">
+                    <h2><span>▤</span> 最新二维码</h2>
+                    <div class="qr-preview" id="qr-preview">
+                        <span style="color:var(--text-2);">等待二维码...</span>
+                    </div>
+                </section>
+                <section class="card">
+                    <h2><span>▤</span> 发送记录</h2>
+                    <div id="send-records">
+                        <div class="record-item">暂无记录</div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="card">
+                <div class="countdown" id="countdown">--:--</div>
+            </section>
+
+            <section class="card">
+                <h2><span>▤</span> 操作日志 <span class="h2-tag">LIVE</span></h2>
+                <div class="log-panel">
+                    <div id="log-content"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        (function(){
+            var btn = document.getElementById('theme-toggle');
+            if (!btn) return;
+            function cur(){ return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+            function render(){
+                var dark = cur() === 'dark';
+                btn.textContent = dark ? '☀' : '☾';
+                btn.title = dark ? '切换为浅色' : '切换为深色';
+            }
+            btn.onclick = function(){
+                var dark = cur() === 'dark';
+                document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+                try { localStorage.setItem('cme-theme', dark ? 'light' : 'dark'); } catch (e) {}
+                render();
+            };
+            render();
+        })();
+    </script>
+    <script src="/static/app.js"></script>
+</body>
+</html>

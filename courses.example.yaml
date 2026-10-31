@@ -1,0 +1,43 @@
+# ============================================================
+# 课程清单模板
+# 使用方法：复制为 courses.yaml 后按需增删
+#   copy courses.example.yaml courses.yaml
+#
+# courses.yaml 保存的是本机真实的课程与考勤状态，已被 .gitignore 忽略。
+# status 字段会在建课/签到/签退/授分后由程序自动回写。
+# ============================================================
+
+metadata:
+  total_courses: 2
+  teacher: 示例教师
+  default_discipline: 临床外科学
+  default_sub_discipline: 整形外科学
+  default_activity_form: 研讨会
+  default_assessment_method: 其他
+  default_credits: 0.2
+
+categories:
+- name: 示例分类（1-2号）
+  courses:
+  - id: 1
+    activity_name: 示例活动名称一
+    course_name: 示例活动名称一
+    note: ''
+    status:
+      created: false
+      created_date: ''
+      sign_in: false
+      sign_out: false
+      granted: false
+      held: false
+  - id: 2
+    activity_name: 示例活动名称二
+    course_name: 示例活动名称二
+    note: ''
+    status:
+      created: false
+      created_date: ''
+      sign_in: false
+      sign_out: false
+      granted: false
+      held: false
