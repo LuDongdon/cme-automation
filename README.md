@@ -85,7 +85,7 @@
 ### 安装
 
 ```bash
-git clone https://github.com/LuDongdon/cme-automation.git
+git clone https://github.com/LuDongdon/-cme-automation.git
 cd cme-automation
 
 pip install -r requirements.txt
